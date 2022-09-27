@@ -1,0 +1,77 @@
+//@version=5
+indicator(title="Ichimoku scalping PB", shorttitle="IchimokuPB", overlay=true)
+conversionPeriods = input.int(9, minval=1, title="Conversion Line Length")
+basePeriods = input.int(26, minval=1, title="Base Line Length")
+laggingSpan2Periods = input.int(52, minval=1, title="Leading Span B Length")
+displacement = input.int(26, minval=1, title="Displacement")
+changeCandleColors = input.bool(false, "Change candle colors based on the indicator's cloud")
+showIndicator = input.bool(true, "Draw indicator on the chart")
+showExitPoints = input.bool(true, "Show Exit Spots")
+
+// VARIABLES
+var bool buy = true             //signal d'achat
+//var bool sell = true            //signal de vente
+var bool lineCrossOver = false  //la ligne de conversion devient > à la base
+//var bool lineCrossUnder = false
+var bool signalCrossOver = false//
+//var bool signalCrossUnder = false
+var int lastSignalIndex = 0
+var float lastSignalValue = 0.0
+
+// FUNCTION
+getDonchian(len, src) => math.avg(ta.lowest(src, len), ta.highest(src, len))
+getLeadLine1(conversion, base) => math.avg(conversion, base)
+    
+// SIGNALS
+conversionLine = getDonchian(conversionPeriods, close)
+baseLine = getDonchian(basePeriods, close)
+leadLine1 = getLeadLine1(conversionLine, baseLine)
+leadLine2 = getDonchian(laggingSpan2Periods, close)
+
+//CHECKERS
+if ta.crossover(conversionLine, baseLine)
+    lineCrossOver := true
+if ta.crossunder(conversionLine, baseLine)
+    lineCrossOver := false
+    
+//if ta.crossover(conversionLine, baseLine)
+//    lineCrossUnder := true
+//if ta.crossunder(conversionLine, baseLine)
+//    lineCrossUnder := false
+
+if ta.crossover(close, math.max(leadLine1[displacement - 1], leadLine2[displacement - 1]))    
+    signalCrossOver := true
+if ta.crossunder(close, math.max(leadLine1[displacement - 1], leadLine2[displacement - 1]))    
+    signalCrossOver := false
+    
+//if ta.crossunder(close, math.min(leadLine1[displacement - 1], leadLine2[displacement - 1]))    
+//    signalCrossUnder := true
+//if ta.crossover(close, math.min(leadLine1[displacement - 1], leadLine2[displacement - 1]))    
+//    signalCrossUnder := false
+    
+//CONDITIONS
+cond1 = signalCrossOver and lineCrossOver
+//cond2 = signalCrossUnder and lineCrossUnder
+
+// PLOTS
+plotshape(cond1 and buy, "Long", shape.triangleup, location.belowbar, color.green, size=size.small)
+//plotshape(cond2 and sell, "Short", shape.triangledown, location.abovebar, color.red, size=size.small)
+alertcondition(cond1 and buy, "Scalping Ichimoku Long", "Long")
+//alertcondition(cond2 and sell, "Scalping Ichimoku Short", "Short")
+plotshape(ta.crossover(conversionLine, baseLine) and buy and showExitPoints, "Conversion Crossed Over Baseline",shape.xcross, location.belowbar,cond1 ? color.orange : color.red,0,"Exit",cond1 ? color.orange : color.red,false,size.tiny)
+//plotshape(ta.crossunder(conversionLine, baseLine) and sell and showExitPoints,"Conversion Crossed Under Baseline",shape.xcross,location.abovebar,cond2 ? color.aqua : color.green,0,"Exit",cond2 ? color.aqua : color.green,false,size.tiny)
+barcolor(changeCandleColors ? leadLine1 > leadLine2 ? color.green : color.red : na, displacement - 1)
+plot(conversionLine, color=showIndicator ? #42A5F5 : na, title="Tenkan9")
+plot(baseLine, color=showIndicator ? #EF5350 : na, title="Kijun 26")
+plot(close, offset = -displacement + 1, color=showIndicator ? #66BB6A : na, title="Chikou")
+p1 = plot(leadLine1, offset = displacement - 1, color=showIndicator ? #9CCC65 : na,title="Senkou Span A")
+p2 = plot(leadLine2, offset = displacement - 1, color=showIndicator ? #EC407A : na,title="Senkou Span B")
+fill(p1, p2, showIndicator ? leadLine1 > leadLine2 ? color.new(#9CCC65, 90) : color.new(#EC407A, 90) : na, "Kumo")
+
+// ONE SIGNAL AT TIME
+//if cond1 and not cond1[1] and buy
+//    buy := false
+//    sell := true
+//if cond2 and not cond2[1] and sell
+//    buy := true
+//    sell := false
