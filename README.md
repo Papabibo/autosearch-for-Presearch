@@ -1,1 +1,1 @@
-# test
+# Autoclicker en Python pour Linux
